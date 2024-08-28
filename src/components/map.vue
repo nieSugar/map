@@ -94,18 +94,14 @@ work.onmessage = (ev) => {
 }
 
 function mapEchartsData(data: EchartData) {
-  const { min, max, response } = data;
+  const { max, response } = data;
   const { power, state } = response;
   const lent = power.length;
   if (lent === 0) {
     return;
   }
-  const minTime = new Date(min).getTime();
-  const maxTime = new Date(max).getTime();
-  const times = getTimes(minTime, maxTime, lent);
-
-  timeDatas.push(...times.map(time => new Date(time).toLocaleTimeString()));
-  stateDatas.push(...Array(lent).fill(state));
+  timeDatas.push(new Date(max).toLocaleTimeString());
+  stateDatas.push(state);
 
   if (timeDatas.length > 30) {
     const len = timeDatas.length - 30;
