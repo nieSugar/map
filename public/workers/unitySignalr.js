@@ -24,7 +24,6 @@ signalRConnection.onclose(async () => {
 
 signalRConnection.on("ReceiveMessage", (deviceId, min, max, response) => {
   if (deviceId === 1) {
-    console.log(response, "response");
     postMessage({ min, max, response });
   }
 });

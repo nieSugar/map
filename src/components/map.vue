@@ -90,17 +90,19 @@ let work = new Worker('/workers/unitySignalr.js');
 
 work.onmessage = (ev) => {
   mapEchartsData(ev.data as EchartData);
-  status.value = ev.data.response.state;
 }
 
 function mapEchartsData(data: EchartData) {
   const { max, response } = data;
   const { power, state } = response;
+  console.log(data);
+
   const lent = power.length;
   if (lent === 0) {
     return;
   }
   timeDatas.push(new Date(max).toLocaleTimeString());
+  status.value = state;
   stateDatas.push(state);
 
   if (timeDatas.length > 30) {
@@ -124,16 +126,6 @@ function updateEcartOptionData(item: EChartsType, data: Array<number>, time: Arr
       }
     ]
   });
-}
-
-function getTimes(min: number, max: number, n: number): Array<number> {
-  const val = max - min;
-  const step = Math.floor(val / n);
-  const numbers: Array<number> = [];
-  for (let i = 1; i <= n; i++) {
-    numbers.push(i * step + min);
-  }
-  return numbers;
 }
 
 // #endregion

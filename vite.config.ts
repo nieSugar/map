@@ -7,5 +7,8 @@ export default defineConfig({
     host: true,
     port: 4477,
   },
+  build: {
+    sourcemap: true,
+  },
   plugins: [vue()],
 });
