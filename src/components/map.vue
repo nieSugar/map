@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { EChartsType } from 'echarts';
+import { EChartsType, DataZoomComponentOption } from 'echarts';
 import { computed, nextTick, ref } from 'vue';
 import * as echarts from "echarts";
 
@@ -17,6 +17,8 @@ const icon = computed(() => {
 const imgUrl = ref("https://img.lifesugar.top/file/86478f0582c74c7dd8941.jpg");
 const status = ref(0);
 
+let dataZoomChange = false;
+
 const handler = () => {
   center.value.lng = 121.40953;
   center.value.lat = 31.260756;
@@ -33,21 +35,38 @@ function initEcharts() {
     statusEchart = echarts.init(statusElement.value as HTMLDivElement);
     statusEchart.setOption({
       title: {
-        text: '状态',
+        text: '充电状态',
         left: 'center'
       },
       grid: {
-        bottom: 20,
         left: 80,
         top: 35
       },
       tooltip: {
         show: false
       },
+      color: ['#5470c6'],
       xAxis: {
         type: 'category',
         data: timeDatas,
+        axisLine: {
+          show: false
+        },
+        axisTick: {
+          show: false
+        }
       },
+      // visualMap: {
+      //   show: false,
+      //   pieces: [{
+      //     gt: 0,
+      //     lte: 2,
+      //     color: 'red',
+      //   }, {
+      //     lte: 0,
+      //     color: 'green',
+      //   }]
+      // },
       yAxis: {
         type: 'value',
         min: 0,
@@ -62,10 +81,23 @@ function initEcharts() {
       series: [
         {
           data: stateDatas,
-          type: 'line'
+          type: 'line',
+          itemStyle: {
+            color: (params: any) => {
+              return params.value === 1 ? '#ff0000' : '#5470c6';
+            }
+          }
         }
-      ]
+      ],
+      dataZoom: [{
+        show: true,
+        start: 100 - (20 / timeDatas.length * 100),
+        end: 100
+      }]
     });
+    statusEchart.on('dataZoom', () => {
+      dataZoomChange = true;
+    })
   });
 }
 
@@ -94,20 +126,14 @@ work.onmessage = (ev) => {
 
 function mapEchartsData(data: EchartData) {
   const { max, response } = data;
-  const { power, state } = response;
-  console.log(data);
-
-  const lent = power.length;
-  if (lent === 0) {
-    return;
-  }
+  const { state } = response;
   timeDatas.push(new Date(max).toLocaleTimeString());
   status.value = state;
   stateDatas.push(state);
-
-  if (timeDatas.length > 30) {
-    const len = timeDatas.length - 30;
+  if (timeDatas.length > 1000) {
+    const len = timeDatas.length - 1000;
     timeDatas.splice(0, len);
+    stateDatas.splice(0, len);
   }
   if (dialogVisible.value) {
     updateEcartOptionData(statusEchart!, stateDatas, timeDatas);
@@ -115,7 +141,7 @@ function mapEchartsData(data: EchartData) {
 }
 
 function updateEcartOptionData(item: EChartsType, data: Array<number>, time: Array<string>) {
-  item?.setOption({
+  const newOption: echarts.EChartsOption = {
     xAxis: {
       data: time,
     },
@@ -125,7 +151,19 @@ function updateEcartOptionData(item: EChartsType, data: Array<number>, time: Arr
         type: 'line'
       }
     ]
-  });
+  };
+  if (time.length > 20 && !dataZoomChange) {
+    const option = item.getOption();
+    const dataZoom = (option.dataZoom as Array<DataZoomComponentOption>);
+    if (dataZoom.length > 0 && dataZoom[0].end === 100) {
+      newOption.dataZoom = [{
+        show: true,
+        start: 100 - (20 / time.length * 100),
+        end: 100
+      }];
+    }
+  }
+  item?.setOption(newOption);
 }
 
 // #endregion
