@@ -6,5 +6,5 @@ import "element-plus/dist/index.css";
 import BaiduMap from 'vue-baidu-map-3x';
 
 createApp(App).use(ElementPlus).use(BaiduMap,{
-  ak:'O8y9cAkKuc7Sv7YrxSSTrUXlQ8kh6AZJ'
+  ak:'RB8eTKX9xgQzX0sKoUfAvWHxRg3haYon'
 }).mount("#app");
