@@ -35,7 +35,7 @@ function initEcharts() {
     statusEchart = echarts.init(statusElement.value as HTMLDivElement);
     statusEchart.setOption({
       title: {
-        text: '充电状态',
+        text: '检测状态',
         left: 'center'
       },
       grid: {
@@ -172,7 +172,7 @@ function updateEcartOptionData(item: EChartsType, data: Array<number>, time: Arr
 
 <template>
   <div class="title">
-    <div class="subTitle"> 海仿智能电瓶车安全系统</div>
+    <div class="subTitle"> 海仿智能安全用电系统 </div>
   </div>
   <div class="card">
     <baidu-map class="bm-view" :zoom="zoom" :center="center" @ready="handler">
@@ -182,7 +182,7 @@ function updateEcartOptionData(item: EChartsType, data: Array<number>, time: Arr
     <el-dialog v-model="dialogVisible" width="40%" :class="{ 'error-shadow': status === 1 }">
       <template #header>
         <div class="header">
-          海仿智能电瓶车安全系统
+          海仿智能安全用电系统
         </div>
       </template>
       <div class="main">
