@@ -5,7 +5,6 @@ import * as echarts from "echarts";
 import BJD1 from "../assets/bjd1.png?url";
 import BJD2 from "../assets/bjd2.png?url";
 
-
 const center = ref({ lng: 0, lat: 0 });
 const zoom = ref(15);
 const dialogVisible = ref(false);
@@ -165,11 +164,27 @@ function mapEchartsData(data: EchartData) {
 }
 
 function updateEchartsPie() {
-  stateDatas.push();
+  const normalCount = stateDatas.filter((state) => state === 0).length;
+  const alarmCount = stateDatas.filter((state) => state === 1).length;
+
   statusPie?.setOption({
+    tooltip: {
+      trigger: "item",
+      formatter: "{b}: {c}",
+    },
+    legend: {
+      orient: "horizontal",
+      bottom: 0,
+    },
     series: [
-      { value: stateDatas.filter((item) => item === 0).length, name: "正常" },
-      { value: stateDatas.filter((item) => item === 1).length, name: "报警" },
+      {
+        type: "pie",
+        radius: "50%",
+        data: [
+          { value: normalCount, name: "正常" },
+          { value: alarmCount, name: "报警" },
+        ],
+      },
     ],
   });
 }

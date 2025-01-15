@@ -23,7 +23,7 @@ signalRConnection.onclose(async () => {
 });
 
 signalRConnection.on("ReceiveMessage", (deviceId, min, max, response) => {
-  if (deviceId === 1) {
+  if (deviceId && deviceId.includes('01000000000000000000')) {
     postMessage({ min, max, response });
   }
 });
