@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { EChartsType, DataZoomComponentOption } from "echarts";
-import { computed, nextTick, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import * as echarts from "echarts";
 import BJD1 from "../assets/bjd1.png?url";
 import BJD2 from "../assets/bjd2.png?url";
+import { deviceApi } from "../services/api";
 
-const center = ref({ lng: 0, lat: 0 });
+const center = ref({ lng: 121.40953, lat: 31.260756 });
 const zoom = ref(15);
 const dialogVisible = ref(false);
 
@@ -223,6 +224,19 @@ function updateEcartOptionData(
 }
 
 // #endregion
+
+async function fetchDevices() {
+  try {
+    const devices = await deviceApi.getDeviceList();
+    console.log(devices);
+  } catch (error) {
+    console.error("获取设备列表失败:", error);
+  }
+}
+
+onMounted(() => {
+  fetchDevices();
+});
 </script>
 
 <template>
