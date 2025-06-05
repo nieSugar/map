@@ -39,16 +39,12 @@ const initDialog = () => {
   dialogVisible.value = true;
 };
 
-// 处理设备点击事件
 const handleDeviceClick = (deviceId: string) => {
-  console.log("点击设备:", deviceId);
   selectedDevice.value = deviceId;
 
-  // 获取该设备的所有通道数据
   const deviceChannelsMap = devicePoints.value.get(deviceId);
   if (deviceChannelsMap) {
     selectedDeviceChannels.value = Array.from(deviceChannelsMap.values());
-    // 设置设备状态为该设备的综合状态
     status.value = getDeviceStatus(deviceId);
   } else {
     selectedDeviceChannels.value = [];
@@ -67,6 +63,16 @@ const getDeviceAddress = (deviceId: string): string => {
   return firstChannel ? firstChannel.address : '';
 };
 
+// 获取排序后的通道列表（报警通道在前，正常通道在后）
+const getSortedChannels = computed(() => {
+  return selectedDeviceChannels.value.sort((a, b) => {
+    if (a.status !== b.status) {
+      return b.status - a.status;
+    }
+    return a.channel.localeCompare(b.channel);
+  });
+});
+
 
 
 // #region  数据接口定义
@@ -81,7 +87,7 @@ interface WorkerMessage {
     lat: number;
     power: number;
     state: number;
-  } | string; // 可能是字符串消息（如系统连接消息）
+  } | string;
   timestamp: string;
 }
 
@@ -106,20 +112,18 @@ let work = new Worker("/workers/unitySignalr.js");
 const devicePoints = ref<Map<string, Map<string, DevicePoint>>>(new Map());
 const pointsData = ref<Array<any>>([]);
 
-// 获取设备的综合状态（如果任一通道报警，则设备报警）
 const getDeviceStatus = (deviceId: string): number => {
   const deviceChannels = devicePoints.value.get(deviceId);
   if (!deviceChannels) return 0;
 
   for (const channelData of deviceChannels.values()) {
     if (channelData.status === 1) {
-      return 1; // 有任一通道报警，设备状态为报警
+      return 1;
     }
   }
-  return 0; // 所有通道正常
+  return 0;
 };
 
-// 获取设备的位置（使用第一个通道的位置）
 const getDevicePosition = (deviceId: string) => {
   const deviceChannels = devicePoints.value.get(deviceId);
   if (!deviceChannels) return null;
@@ -134,16 +138,12 @@ work.onmessage = (ev) => {
     if (typeof data.response === 'object' && data.response !== null) {
       const deviceId = data.deviceId;
       const channel = data.response.channel;
-      console.log("处理设备ID:", deviceId, "通道:", channel);
-      console.log("消息时间戳:", data.timestamp);
 
-      // 获取设备位置坐标（优先使用response中的坐标）
       const position = {
         lng: data.response.lon,
         lat: data.response.lat
       };
 
-      // 创建或更新设备点位数据
       const devicePoint: DevicePoint = {
         deviceId: deviceId,
         position: position,
@@ -156,26 +156,20 @@ work.onmessage = (ev) => {
         }
       };
 
-      // 确保设备存在于Map中
       if (!devicePoints.value.has(deviceId)) {
         devicePoints.value.set(deviceId, new Map<string, DevicePoint>());
       }
 
-      // 获取设备的通道Map并更新特定通道的数据
       const deviceChannelsMap = devicePoints.value.get(deviceId)!;
       deviceChannelsMap.set(channel, devicePoint);
 
-      // 如果当前选中的是这个设备，更新选中设备的通道数据和状态
       if (selectedDevice.value === deviceId) {
         selectedDeviceChannels.value = Array.from(deviceChannelsMap.values());
-        // 更新设备的综合状态
         status.value = getDeviceStatus(deviceId);
       } else {
-        // 更新全局状态（使用最新接收到的设备状态）
         status.value = data.response.state;
       }
 
-      // 添加到历史数据数组（用于调试和历史记录）
       const historyData = {
         deviceId: deviceId,
         timestamp: new Date().toLocaleString(),
@@ -188,14 +182,12 @@ work.onmessage = (ev) => {
 
       pointsData.value.push(historyData);
 
-      // 限制历史数据数组大小
       if (pointsData.value.length > 1000) {
         const removeCount = pointsData.value.length - 1000;
         pointsData.value.splice(0, removeCount);
       }
 
     } else if (typeof data.response === 'string') {
-      // 处理系统消息（如连接状态等）
       console.log("收到系统消息:", data.response);
     } else {
       console.warn("数据中没有有效的response字段");
@@ -228,10 +220,8 @@ onMounted(() => {
   <div class="card">
     <baidu-map class="bm-view" :zoom="zoom" :center="center" @ready="handler">
       <!-- 动态渲染所有设备点位 -->
-      <bm-marker v-for="[deviceId] in devicePoints" :key="deviceId"
-        :position="getDevicePosition(deviceId)"
-        :icon="getDeviceIcon(getDeviceStatus(deviceId))"
-        @click="() => handleDeviceClick(deviceId)"
+      <bm-marker v-for="[deviceId] in devicePoints" :key="deviceId" :position="getDevicePosition(deviceId)"
+        :icon="getDeviceIcon(getDeviceStatus(deviceId))" @click="() => handleDeviceClick(deviceId)"
         :title="`设备: ${deviceId} | 状态: ${getDeviceStatus(deviceId) === 1 ? '报警' : '正常'}`">
       </bm-marker>
 
@@ -254,7 +244,8 @@ onMounted(() => {
           <div class="info-row">
             <span class="label">状态:</span>
             <span class="value status" :class="{ 'alarm': selectedDevice && getDeviceStatus(selectedDevice) === 1 }">
-              <img class="status-icon" :src="selectedDevice && getDeviceStatus(selectedDevice) === 1 ? BJD1 : BJD2" alt="" />
+              <img class="status-icon" :src="selectedDevice && getDeviceStatus(selectedDevice) === 1 ? BJD1 : BJD2"
+                alt="" />
               {{ selectedDevice && getDeviceStatus(selectedDevice) === 1 ? '报警' : '正常' }}
             </span>
           </div>
@@ -268,11 +259,8 @@ onMounted(() => {
         <div v-if="selectedDevice && selectedDeviceChannels.length > 0" class="channels-section">
           <h4>通道列表 ({{ selectedDeviceChannels.length }}个)</h4>
           <div class="channel-list">
-            <div
-              v-for="channel in selectedDeviceChannels"
-              :key="channel.channel"
-              :class="['channel-item', { 'alarm': channel.status === 1 }]"
-            >
+            <div v-for="channel in getSortedChannels" :key="channel.channel"
+              :class="['channel-item', { 'alarm': channel.status === 1 }]">
               <div class="channel-header">
                 <span class="channel-name">通道 {{ channel.channel }}</span>
                 <span class="channel-status" :class="{ 'alarm': channel.status === 1 }">
@@ -487,6 +475,4 @@ onMounted(() => {
   padding: 2rem;
   font-style: italic;
 }
-
-
 </style>
