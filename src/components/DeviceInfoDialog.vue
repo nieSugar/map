@@ -1,7 +1,7 @@
 <template>
-  <el-dialog 
-    v-model="dialogVisible" 
-    width="30%" 
+  <el-dialog
+    v-model="dialogVisible"
+    width="30%"
     :class="{ 'error-shadow': deviceStatus === 1 }"
     @close="handleClose"
   >
@@ -19,6 +19,7 @@
         <div class="info-row">
           <span class="label">状态:</span>
           <span class="value status" :class="{ 'alarm': deviceStatus === 1 }">
+            <img class="status-icon" :src="deviceStatus === 1 ? BJD1 : BJD2" alt="" />
             {{ deviceStatus === 1 ? '报警' : '正常' }}
           </span>
         </div>
@@ -60,6 +61,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import BJD1 from "../assets/bjd1.png?url";
+import BJD2 from "../assets/bjd2.png?url";
 import type { DevicePoint, DeviceData, DeviceStatus } from '../types/config';
 
 interface Props {
@@ -113,12 +116,15 @@ const sortedChannels = computed((): DevicePoint[] => {
 const handleClose = (): void => {
   emit('close');
 };
+
+
 </script>
 
 <style scoped>
 .header {
-  font-size: 18px;
+  font-size: 1.25rem;
   font-weight: bold;
+  transform: skew(-10deg);
   color: #333;
 }
 
@@ -154,9 +160,22 @@ const handleClose = (): void => {
   text-align: right;
 }
 
+.value.status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
 .status.alarm {
   color: #f56c6c;
   font-weight: bold;
+}
+
+.status-icon {
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 .channels-section h4 {
@@ -219,8 +238,7 @@ const handleClose = (): void => {
   padding: 40px 0;
 }
 
-/* 报警状态的对话框阴影效果 */
-:deep(.error-shadow .el-dialog) {
-  box-shadow: 0 0 20px rgba(245, 108, 108, 0.3);
-}
+
 </style>
+
+

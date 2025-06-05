@@ -256,3 +256,45 @@ div:focus {
     content: " ";
   }
 }
+
+/* 报警弹窗动画效果 */
+@keyframes shadow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(112, 43, 43, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 8px 8px rgba(255, 0, 0, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(112, 43, 43, 0.7);
+  }
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 报警弹窗边框动画 */
+.error-shadow .el-dialog {
+  animation: shadow 1.5s infinite !important;
+}
+
+/* Element Plus 2.x 版本的弹窗选择器 */
+.el-overlay .error-shadow .el-dialog,
+.error-shadow.el-dialog,
+.error-shadow .el-overlay-dialog .el-dialog {
+  animation: shadow 1.5s infinite !important;
+}
+
+/* 确保动画应用到弹窗本身 */
+.error-shadow {
+  animation: shadow 1.5s infinite !important;
+}
