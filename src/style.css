@@ -298,3 +298,49 @@ div:focus {
 .error-shadow {
   animation: shadow 1.5s infinite !important;
 }
+
+/* 通道列表滚动条美化样式 - 低调隐约风格 */
+.channel-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.channel-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.channel-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.channel-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.channel-list::-webkit-scrollbar-thumb:active {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 报警状态下的滚动条样式 - 稍微明显一点 */
+.error-shadow .channel-list::-webkit-scrollbar-thumb {
+  background: rgba(245, 108, 108, 0.15);
+}
+
+.error-shadow .channel-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 108, 108, 0.25);
+}
+
+.error-shadow .channel-list::-webkit-scrollbar-thumb:active {
+  background: rgba(245, 108, 108, 0.35);
+}
+
+/* Firefox 滚动条样式 */
+.channel-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+}
+
+.error-shadow .channel-list {
+  scrollbar-color: rgba(245, 108, 108, 0.15) transparent;
+}
