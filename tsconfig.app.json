@@ -23,7 +23,7 @@
     "noFallthroughCasesInSwitch": true,
     "types": [
       "element-plus/global"
-    ],
+    ]
   },
   "include": [
     "src/**/*.ts",
