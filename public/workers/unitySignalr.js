@@ -1,5 +1,6 @@
 importScripts("signalr.js");
-const signalRUrl = "http://139.196.243.9:5286/ImpeDanceHub";
+// const signalRUrl = "http://139.196.243.9:5286/ImpeDanceHub";
+const signalRUrl = "http://localhost:5000/ImpeDanceHub";
 let signalRConnection = new signalR.HubConnectionBuilder()
   .withUrl(signalRUrl, {})
   .configureLogging(signalR.LogLevel.Error)
@@ -22,10 +23,13 @@ signalRConnection.onclose(async () => {
   await start();
 });
 
-signalRConnection.on("ReceiveMessage", (deviceId, min, max, response) => {
-  if (deviceId && deviceId.includes('01000000000000000000')) {
-    postMessage({ min, max, response });
-  }
+signalRConnection.on("ReceiveMessage", (deviceId, response) => {
+  console.log("Worker接收到消息:", { deviceId, response });
+  postMessage({
+    deviceId: deviceId,
+    response: response,
+    timestamp: new Date().toISOString()
+  });
 });
 
 start();

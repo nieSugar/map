@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { EChartsType, DataZoomComponentOption } from "echarts";
-import { computed, nextTick, onMounted, ref } from "vue";
-import * as echarts from "echarts";
+import { computed, onMounted, ref } from "vue";
 import BJD1 from "../assets/bjd1.png?url";
 import BJD2 from "../assets/bjd2.png?url";
 import { deviceApi } from "../services/api";
@@ -17,9 +15,19 @@ const icon = computed(() => {
   };
 });
 
-const status = ref(0);
+// 为每个设备生成图标的函数
+const getDeviceIcon = (deviceStatus: number) => {
+  return {
+    url: deviceStatus > 0 ? "/red.gif" : "/green.svg",
+    size: { width: 31, height: 40 },
+  };
+};
 
-let dataZoomChange = false;
+// 当前选中的设备
+const selectedDevice = ref<string | null>(null); // 存储设备ID
+const selectedDeviceChannels = ref<DevicePoint[]>([]); // 存储选中设备的所有通道数据
+
+const status = ref(0);
 
 const handler = () => {
   center.value.lng = 121.40953;
@@ -29,199 +37,173 @@ const handler = () => {
 
 const initDialog = () => {
   dialogVisible.value = true;
-  initEcharts();
 };
 
-function initEcharts() {
-  nextTick(() => {
-    statusEchart = echarts.init(statusElement.value as HTMLDivElement);
-    statusEchart.setOption({
-      title: {
-        text: "安全用电状态监控",
-        left: "center",
-      },
-      grid: {
-        left: 80,
-        top: 35,
-      },
-      tooltip: {
-        show: false,
-      },
-      color: ["#5470c6"],
-      xAxis: {
-        type: "category",
-        data: timeDatas,
-        axisLine: {
-          show: false,
-        },
-        axisTick: {
-          show: false,
-        },
-      },
-      // visualMap: {
-      //   show: false,
-      //   pieces: [{
-      //     gt: 0,
-      //     lte: 2,
-      //     color: 'red',
-      //   }, {
-      //     lte: 0,
-      //     color: 'green',
-      //   }]
-      // },
-      yAxis: {
-        type: "value",
-        min: 0,
-        max: 1,
-        interval: 1,
-        axisLabel: {
-          formatter: (value: number) => {
-            return value === 1 ? "报警" : "正常";
-          },
-        },
-      },
-      series: [
-        {
-          data: stateDatas,
-          type: "line",
-          itemStyle: {
-            color: (params: any) => {
-              return params.value === 1 ? "#ff0000" : "#5470c6";
-            },
-          },
-        },
-      ],
-      dataZoom: [
-        {
-          show: true,
-          height: 10,
-          start: 100 - (20 / timeDatas.length) * 100,
-          end: 100,
-        },
-      ],
-    });
-    statusEchart.on("dataZoom", () => {
-      dataZoomChange = true;
-    });
+// 处理设备点击事件
+const handleDeviceClick = (deviceId: string) => {
+  console.log("点击设备:", deviceId);
+  selectedDevice.value = deviceId;
 
-    statusPie = echarts.init(statusPieElement.value as HTMLDivElement);
-    statusPie.setOption({
-      series: [
-        {
-          type: "pie",
-          radius: "50%",
-          data: [
-            { value: 0, name: "正常" },
-            { value: 0, name: "报警" },
-          ],
-        },
-      ],
-    });
-  });
+  // 获取该设备的所有通道数据
+  const deviceChannelsMap = devicePoints.value.get(deviceId);
+  if (deviceChannelsMap) {
+    selectedDeviceChannels.value = Array.from(deviceChannelsMap.values());
+    // 设置设备状态为该设备的综合状态
+    status.value = getDeviceStatus(deviceId);
+  } else {
+    selectedDeviceChannels.value = [];
+    status.value = 0;
+  }
+
+  dialogVisible.value = true;
+};
+
+// 获取设备地址（使用第一个通道的地址，因为同一设备所有通道地址相同）
+const getDeviceAddress = (deviceId: string): string => {
+  const deviceChannels = devicePoints.value.get(deviceId);
+  if (!deviceChannels) return '';
+
+  const firstChannel = Array.from(deviceChannels.values())[0];
+  return firstChannel ? firstChannel.address : '';
+};
+
+
+
+// #region  数据接口定义
+
+interface WorkerMessage {
+  deviceId: string;
+  response: {
+    deviceId: string;
+    channel: string;
+    address: string;
+    lon: number;
+    lat: number;
+    power: number;
+    state: number;
+  } | string; // 可能是字符串消息（如系统连接消息）
+  timestamp: string;
 }
 
-// #region  弹窗
-
-interface EchartData {
-  min: number;
-  max: number;
-  response: {
-    power: Array<number>;
-    state: number;
-    zimag: Array<number>;
-    zreal: Array<number>;
+interface DevicePoint {
+  deviceId: string;
+  position: {
+    lng: number;
+    lat: number;
+  };
+  status: number;
+  lastUpdate: string;
+  channel: string;
+  address: string;
+  data: {
+    power: number;
   };
 }
-
-const statusElement = ref<HTMLDivElement | null>(null);
-let timeDatas: Array<string> = [];
-let stateDatas: Array<number> = [];
-let statusEchart: EChartsType | null;
-
-const statusPieElement = ref<HTMLDivElement | null>(null);
-let statusPie: EChartsType | null;
 
 let work = new Worker("/workers/unitySignalr.js");
 
-work.onmessage = (ev) => {
-  mapEchartsData(ev.data as EchartData);
-};
+// 存储设备点位数据 - 改为两层结构：设备ID -> 通道 -> 设备数据
+const devicePoints = ref<Map<string, Map<string, DevicePoint>>>(new Map());
+const pointsData = ref<Array<any>>([]);
 
-function mapEchartsData(data: EchartData) {
-  const { max, response } = data;
-  const { state } = response;
-  timeDatas.push(new Date(max).toLocaleTimeString());
-  status.value = state;
-  stateDatas.push(state);
-  if (timeDatas.length > 1000) {
-    const len = timeDatas.length - 1000;
-    timeDatas.splice(0, len);
-    stateDatas.splice(0, len);
-  }
-  if (dialogVisible.value) {
-    updateEcartOptionData(statusEchart!, stateDatas, timeDatas);
-    updateEchartsPie();
-  }
-}
+// 获取设备的综合状态（如果任一通道报警，则设备报警）
+const getDeviceStatus = (deviceId: string): number => {
+  const deviceChannels = devicePoints.value.get(deviceId);
+  if (!deviceChannels) return 0;
 
-function updateEchartsPie() {
-  const normalCount = stateDatas.filter((state) => state === 0).length;
-  const alarmCount = stateDatas.filter((state) => state === 1).length;
-
-  statusPie?.setOption({
-    tooltip: {
-      trigger: "item",
-      formatter: "{b}: {c}",
-    },
-    legend: {
-      orient: "horizontal",
-      bottom: 0,
-    },
-    series: [
-      {
-        type: "pie",
-        radius: "50%",
-        data: [
-          { value: normalCount, name: "正常" },
-          { value: alarmCount, name: "报警" },
-        ],
-      },
-    ],
-  });
-}
-
-function updateEcartOptionData(
-  item: EChartsType,
-  data: Array<number>,
-  time: Array<string>
-) {
-  const newOption: echarts.EChartsOption = {
-    xAxis: {
-      data: time,
-    },
-    series: [
-      {
-        data: data,
-        type: "line",
-      },
-    ],
-  };
-  if (time.length > 20 && !dataZoomChange) {
-    const option = item.getOption();
-    const dataZoom = option.dataZoom as Array<DataZoomComponentOption>;
-    if (dataZoom.length > 0 && dataZoom[0].end === 100) {
-      newOption.dataZoom = [
-        {
-          show: true,
-          height: 15,
-          start: 100 - (20 / time.length) * 100,
-          end: 100,
-        },
-      ];
+  for (const channelData of deviceChannels.values()) {
+    if (channelData.status === 1) {
+      return 1; // 有任一通道报警，设备状态为报警
     }
   }
-  item?.setOption(newOption);
-}
+  return 0; // 所有通道正常
+};
+
+// 获取设备的位置（使用第一个通道的位置）
+const getDevicePosition = (deviceId: string) => {
+  const deviceChannels = devicePoints.value.get(deviceId);
+  if (!deviceChannels) return null;
+
+  const firstChannel = Array.from(deviceChannels.values())[0];
+  return firstChannel ? firstChannel.position : null;
+};
+
+work.onmessage = (ev) => {
+  try {
+    const data = ev.data as WorkerMessage;
+    if (typeof data.response === 'object' && data.response !== null) {
+      const deviceId = data.deviceId;
+      const channel = data.response.channel;
+      console.log("处理设备ID:", deviceId, "通道:", channel);
+      console.log("消息时间戳:", data.timestamp);
+
+      // 获取设备位置坐标（优先使用response中的坐标）
+      const position = {
+        lng: data.response.lon,
+        lat: data.response.lat
+      };
+
+      // 创建或更新设备点位数据
+      const devicePoint: DevicePoint = {
+        deviceId: deviceId,
+        position: position,
+        status: data.response.state,
+        lastUpdate: new Date().toLocaleString(),
+        channel: data.response.channel,
+        address: data.response.address,
+        data: {
+          power: data.response.power
+        }
+      };
+
+      // 确保设备存在于Map中
+      if (!devicePoints.value.has(deviceId)) {
+        devicePoints.value.set(deviceId, new Map<string, DevicePoint>());
+      }
+
+      // 获取设备的通道Map并更新特定通道的数据
+      const deviceChannelsMap = devicePoints.value.get(deviceId)!;
+      deviceChannelsMap.set(channel, devicePoint);
+
+      // 如果当前选中的是这个设备，更新选中设备的通道数据和状态
+      if (selectedDevice.value === deviceId) {
+        selectedDeviceChannels.value = Array.from(deviceChannelsMap.values());
+        // 更新设备的综合状态
+        status.value = getDeviceStatus(deviceId);
+      } else {
+        // 更新全局状态（使用最新接收到的设备状态）
+        status.value = data.response.state;
+      }
+
+      // 添加到历史数据数组（用于调试和历史记录）
+      const historyData = {
+        deviceId: deviceId,
+        timestamp: new Date().toLocaleString(),
+        state: data.response.state,
+        power: data.response.power,
+        channel: data.response.channel,
+        address: data.response.address,
+        position: position
+      };
+
+      pointsData.value.push(historyData);
+
+      // 限制历史数据数组大小
+      if (pointsData.value.length > 1000) {
+        const removeCount = pointsData.value.length - 1000;
+        pointsData.value.splice(0, removeCount);
+      }
+
+    } else if (typeof data.response === 'string') {
+      // 处理系统消息（如连接状态等）
+      console.log("收到系统消息:", data.response);
+    } else {
+      console.warn("数据中没有有效的response字段");
+    }
+  } catch (error) {
+    console.error("处理worker消息时出错:", error);
+  }
+};
 
 // #endregion
 
@@ -245,41 +227,68 @@ onMounted(() => {
   </div>
   <div class="card">
     <baidu-map class="bm-view" :zoom="zoom" :center="center" @ready="handler">
-      <bm-marker
-        :position="{ lng: 121.40953, lat: 31.260756 }"
-        :icon="icon"
-        @click="initDialog"
-      >
+      <!-- 动态渲染所有设备点位 -->
+      <bm-marker v-for="[deviceId] in devicePoints" :key="deviceId"
+        :position="getDevicePosition(deviceId)"
+        :icon="getDeviceIcon(getDeviceStatus(deviceId))"
+        @click="() => handleDeviceClick(deviceId)"
+        :title="`设备: ${deviceId} | 状态: ${getDeviceStatus(deviceId) === 1 ? '报警' : '正常'}`">
+      </bm-marker>
+
+      <!-- 如果没有设备数据，显示默认标记 -->
+      <bm-marker v-if="devicePoints.size === 0" :position="{ lng: 121.40953, lat: 31.260756 }" :icon="icon"
+        @click="initDialog" title="默认位置">
       </bm-marker>
     </baidu-map>
-    <el-dialog
-      v-model="dialogVisible"
-      width="40%"
-      :class="{ 'error-shadow': status === 1 }"
-    >
+    <el-dialog v-model="dialogVisible" width="30%" :class="{ 'error-shadow': status === 1 }">
       <template #header>
-        <div class="header">海仿智能安全用电卫士系统</div>
+        <div class="header">设备信息</div>
       </template>
-      <div class="main">
-        <div class="title-info">
-          <div class="title-info-row">
-            <label class="lable"> 地址: </label>
-            <span class="lable">上海市普陀区桃浦新村合欢苑121号6楼-601</span>
+      <div class="dialog-content">
+        <!-- 基本信息 -->
+        <div class="basic-info">
+          <div class="info-row">
+            <span class="label">设备ID:</span>
+            <span class="value">{{ selectedDevice || '未选择设备' }}</span>
           </div>
-          <div class="title-info-row">
-            <label class="lable"> 状态: </label>
-            <span class="lable">
-              <img class="bg-img" :src="status === 1 ? BJD1 : BJD2" alt="" />
+          <div class="info-row">
+            <span class="label">状态:</span>
+            <span class="value status" :class="{ 'alarm': selectedDevice && getDeviceStatus(selectedDevice) === 1 }">
+              <img class="status-icon" :src="selectedDevice && getDeviceStatus(selectedDevice) === 1 ? BJD1 : BJD2" alt="" />
+              {{ selectedDevice && getDeviceStatus(selectedDevice) === 1 ? '报警' : '正常' }}
             </span>
           </div>
+          <div class="info-row" v-if="selectedDevice">
+            <span class="label">地址:</span>
+            <span class="value">{{ getDeviceAddress(selectedDevice) }}</span>
+          </div>
         </div>
-        <div class="title-info">
-          <div ref="statusPieElement" class="echats"></div>
+
+        <!-- 通道列表 -->
+        <div v-if="selectedDevice && selectedDeviceChannels.length > 0" class="channels-section">
+          <h4>通道列表 ({{ selectedDeviceChannels.length }}个)</h4>
+          <div class="channel-list">
+            <div
+              v-for="channel in selectedDeviceChannels"
+              :key="channel.channel"
+              :class="['channel-item', { 'alarm': channel.status === 1 }]"
+            >
+              <div class="channel-header">
+                <span class="channel-name">通道 {{ channel.channel }}</span>
+                <span class="channel-status" :class="{ 'alarm': channel.status === 1 }">
+                  {{ channel.status === 1 ? '报警' : '正常' }}
+                </span>
+              </div>
+              <div class="channel-details">
+                <span>功率: {{ channel.data.power }}W</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="body">
-        <div class="detail-echarts">
-          <div ref="statusElement" class="echats"></div>
+
+        <!-- 没有数据时显示 -->
+        <div v-else class="no-data">
+          暂无设备数据
         </div>
       </div>
     </el-dialog>
@@ -357,51 +366,127 @@ onMounted(() => {
   color: #fff;
 }
 
-.bg-img {
-  width: 1.5rem;
-  height: 1.5rem;
+/* 弹窗内容样式 */
+.dialog-content {
+  padding: 1rem 0;
 }
 
-.main {
-  display: flex;
+.basic-info {
+  margin-bottom: 1.5rem;
 }
 
-.img {
-  border-radius: 10px;
-  width: 300px;
-  height: 150px;
-}
-
-.title-info {
-  padding-left: 5px;
-  display: grid;
-  align-items: center;
-  width: calc(100% - 300px - 4rem);
-}
-
-.title-info-row {
+.info-row {
   display: flex;
   align-items: center;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.title-info-row > label {
-  min-width: 3rem;
+.info-row:last-child {
+  border-bottom: none;
 }
 
-.lable,
-.val {
-  font-size: 1rem;
+.label {
+  font-weight: 600;
+  color: #333;
+  min-width: 80px;
+  margin-right: 1rem;
 }
 
-.detail-echarts {
+.value {
+  color: #666;
+  flex: 1;
+}
+
+.value.status {
   display: flex;
-  justify-content: center;
-  gap: 1%;
-  padding-top: 0.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
 }
 
-.echats {
-  width: 90%;
-  height: 200px;
+.value.status.alarm {
+  color: #ff4d4f;
 }
+
+.status-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+/* 通道部分样式 */
+.channels-section {
+  margin-top: 1rem;
+}
+
+.channels-section h4 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.channel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.channel-item {
+  padding: 0.75rem;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  background-color: #fafafa;
+}
+
+.channel-item.alarm {
+  border-color: #ff4d4f;
+  background-color: #fff2f0;
+}
+
+.channel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.channel-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.channel-status {
+  font-size: 0.85rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background-color: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.channel-status.alarm {
+  background-color: #fff2f0;
+  color: #ff4d4f;
+  border-color: #ffccc7;
+}
+
+.channel-details {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.no-data {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+  font-style: italic;
+}
+
+
 </style>
