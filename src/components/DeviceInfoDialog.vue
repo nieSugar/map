@@ -46,6 +46,7 @@
             </div>
             <div class="channel-details">
               <span>功率: {{ channel.data.power }}W</span>
+              <span class="channel-time">更新时间: {{ channel.lastUpdate }}</span>
             </div>
           </div>
         </div>
@@ -230,6 +231,15 @@ const handleClose = (): void => {
 .channel-details {
   color: #666;
   font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.channel-time {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
 }
 
 .no-data {
