@@ -113,23 +113,23 @@ export function throttle<T extends (...args: any[]) => any>(
 /**
  * 格式化时间戳
  * @param timestamp 时间戳或日期字符串
- * @returns 格式化后的时间字符串
+ * @returns 格式化后的时间字符串 (yyyy-mm-dd HH:MM:SS)
  */
 export function formatTimestamp(timestamp: string | number | Date): string {
   const date = new Date(timestamp);
-  
+
   if (isNaN(date.getTime())) {
     return '无效时间';
   }
-  
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 /**

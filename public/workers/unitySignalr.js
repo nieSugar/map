@@ -1,6 +1,6 @@
 importScripts("signalr.js");
-// const signalRUrl = "http://139.196.243.9:5286/ImpeDanceHub";
-const signalRUrl = "http://localhost:5000/ImpeDanceHub";
+const signalRUrl = "http://139.196.243.9:5286/ImpeDanceHub";
+// const signalRUrl = "http://localhost:5000/ImpeDanceHub";
 let signalRConnection = new signalR.HubConnectionBuilder()
   .withUrl(signalRUrl, {})
   .configureLogging(signalR.LogLevel.Error)

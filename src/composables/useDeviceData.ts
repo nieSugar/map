@@ -1,4 +1,5 @@
 import { ref, computed, type Ref } from 'vue';
+import { formatTimestamp } from '../utils/deviceUtils';
 import type { DevicePoint, DeviceData, WorkerMessage, DeviceStatus } from '../types/config';
 
 export function useDeviceData() {
@@ -73,7 +74,7 @@ export function useDeviceData() {
       deviceId,
       position,
       status: state,
-      lastUpdate: new Date().toLocaleString(),
+      lastUpdate: formatTimestamp(new Date()),
       channel,
       address,
       data: { power }
@@ -90,7 +91,7 @@ export function useDeviceData() {
         channels: new Map(),
         position,
         status: state,
-        lastUpdate: new Date().toLocaleString(),
+        lastUpdate: formatTimestamp(new Date()),
         address
       };
       deviceDataMap.value.set(deviceId, deviceData);
@@ -101,7 +102,7 @@ export function useDeviceData() {
     deviceData.position = position; // 更新位置
     deviceData.address = address; // 更新地址
     deviceData.status = getDeviceStatus(deviceId); // 重新计算设备状态
-    deviceData.lastUpdate = new Date().toLocaleString();
+    deviceData.lastUpdate = formatTimestamp(new Date());
   };
 
   // 获取所有设备ID列表

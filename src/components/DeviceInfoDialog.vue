@@ -45,8 +45,7 @@
               </span>
             </div>
             <div class="channel-details">
-              <span>功率: {{ channel.data.power }}W</span>
-              <span class="channel-time">更新时间: {{ channel.lastUpdate }}</span>
+              <span class="channel-time">更新时间: {{ formatTimestamp(channel.lastUpdate) }}</span>
             </div>
           </div>
         </div>
@@ -64,6 +63,7 @@
 import { computed } from 'vue';
 import BJD1 from "../assets/bjd1.png?url";
 import BJD2 from "../assets/bjd2.png?url";
+import { formatTimestamp } from '../utils/deviceUtils';
 import type { DevicePoint, DeviceData, DeviceStatus } from '../types/config';
 
 interface Props {
