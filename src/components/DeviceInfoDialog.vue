@@ -23,10 +23,6 @@
             {{ deviceStatus === 1 ? '报警' : '正常' }}
           </span>
         </div>
-        <div class="info-row">
-          <span class="label">地址:</span>
-          <span class="value">{{ deviceAddress || '未知地址' }}</span>
-        </div>
       </div>
 
       <!-- 通道列表 -->
@@ -39,7 +35,7 @@
             :class="['channel-item', { 'alarm': channel.status === 1 }]"
           >
             <div class="channel-header">
-              <span class="channel-name">通道 {{ channel.channel }}</span>
+              <span class="channel-name">通道 {{ `[${channel.channel}] ${channel.address}` }}</span>
               <span class="channel-status" :class="{ 'alarm': channel.status === 1 }">
                 {{ channel.status === 1 ? '报警' : '正常' }}
               </span>
@@ -90,12 +86,6 @@ const dialogVisible = computed({
 const deviceStatus = computed((): DeviceStatus => {
   if (!props.deviceData) return 0;
   return props.deviceData.status;
-});
-
-// 设备地址
-const deviceAddress = computed((): string => {
-  if (!props.deviceData) return '';
-  return props.deviceData.address;
 });
 
 // 排序后的通道列表

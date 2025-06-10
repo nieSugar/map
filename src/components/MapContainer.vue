@@ -20,15 +20,6 @@
           :status="getDeviceStatus(deviceId)"
           @click="handleDeviceClick"
         />
-
-        <!-- 默认标记点（当没有设备数据时显示） -->
-        <bm-marker 
-          v-if="deviceIds.length === 0" 
-          :position="defaultPosition" 
-          :icon="defaultIcon"
-          @click="handleDefaultMarkerClick" 
-          title="默认位置"
-        />
       </baidu-map>
     </div>
 
@@ -49,19 +40,11 @@ import DeviceInfoDialog from './DeviceInfoDialog.vue';
 import { useDeviceData } from '../composables/useDeviceData';
 import { useSignalR } from '../composables/useSignalR';
 import { deviceApi } from '../services/api';
-import { generateDeviceIcon } from '../utils/deviceUtils';
-import type { MapCenter, MapIcon } from '../types/config';
+import type { MapCenter } from '../types/config';
 
 // 地图配置
 const center = ref<MapCenter>({ lng: 121.40953, lat: 31.260756 });
 const zoom = ref<number>(15);
-const defaultPosition: MapCenter = { lng: 121.40953, lat: 31.260756 };
-
-// 默认图标
-const defaultIcon: MapIcon = {
-  url: "/green.svg",
-  size: { width: 31, height: 40 }
-};
 
 // 弹窗状态
 const dialogVisible = ref<boolean>(false);
@@ -107,12 +90,6 @@ const handleMapReady = (): void => {
 // 设备标记点击处理
 const handleDeviceClick = (deviceId: string): void => {
   selectedDeviceId.value = deviceId;
-  dialogVisible.value = true;
-};
-
-// 默认标记点击处理
-const handleDefaultMarkerClick = (): void => {
-  selectedDeviceId.value = null;
   dialogVisible.value = true;
 };
 
