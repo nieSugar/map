@@ -5,11 +5,14 @@
     </div>
     
     <div class="card">
-      <baidu-map 
-        class="bm-view" 
-        :zoom="zoom" 
-        :center="center" 
+      <baidu-map
+        class="bm-view"
+        :zoom="zoom"
+        :center="center"
         @ready="handleMapReady"
+        v-loading="isLoading"
+        element-loading-text="正在加载地图..."
+        element-loading-background="rgba(0, 0, 0, 0.8)"
       >
         <!-- 动态渲染所有设备标记点 -->
         <DeviceMarker
@@ -39,7 +42,9 @@ import DeviceMarker from './DeviceMarker.vue';
 import DeviceInfoDialog from './DeviceInfoDialog.vue';
 import { useDeviceData } from '../composables/useDeviceData';
 import { useSignalR } from '../composables/useSignalR';
+import { useLoading } from '../composables/useLoading';
 import { deviceApi } from '../services/api';
+import { handleApiError } from '../utils/errorHandler';
 import type { MapCenter } from '../types/config';
 
 // 地图配置
@@ -49,6 +54,9 @@ const zoom = ref<number>(15);
 // 弹窗状态
 const dialogVisible = ref<boolean>(false);
 const selectedDeviceId = ref<string | null>(null);
+
+// 使用加载状态
+const { isLoading, withLoading } = useLoading('map');
 
 // 使用设备数据管理
 const {
@@ -101,12 +109,15 @@ const handleDialogClose = (): void => {
 
 // 获取设备列表
 const fetchDevices = async (): Promise<void> => {
-  try {
-    const devices = await deviceApi.getDeviceList();
-    console.log('设备列表:', devices);
-  } catch (error) {
-    console.error('获取设备列表失败:', error);
-  }
+  await withLoading(async () => {
+    try {
+      const devices = await deviceApi.getDeviceList();
+      console.log('设备列表:', devices);
+    } catch (error) {
+      console.error('获取设备列表失败:', error);
+      handleApiError(error, '/Device/GetList');
+    }
+  }, { message: '正在加载设备列表...' });
 };
 
 // 组件挂载时初始化

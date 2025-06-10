@@ -1,10 +1,11 @@
 import axios, { type AxiosResponse, type AxiosError } from 'axios';
-import config from '/public/config.js';
+import { env } from '../config/env';
+import { handleApiError, handleNetworkError } from '../utils/errorHandler';
 import type { ApiResponse, DeviceListItem } from '../types/config';
 
 // 创建axios实例
 const api = axios.create({
-    baseURL: config.baseURL,
+    baseURL: env.API_BASE_URL,
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
@@ -25,6 +26,7 @@ api.interceptors.request.use(
     },
     (error: AxiosError) => {
         console.error('请求拦截器错误:', error);
+        handleApiError(error, 'request-interceptor');
         return Promise.reject(error);
     }
 );
@@ -76,8 +78,10 @@ api.interceptors.response.use(
 
             return Promise.reject(new Error(errorMessage));
         } else if (error.request) {
+            handleNetworkError(error);
             return Promise.reject(new Error('网络连接失败，请检查网络'));
         } else {
+            handleApiError(error, 'request-config');
             return Promise.reject(new Error(error.message || '请求配置错误'));
         }
     }
